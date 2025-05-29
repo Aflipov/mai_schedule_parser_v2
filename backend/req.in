@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy
+bs4
+click
+requests_html
+cachetools
+lxml_html_clean
+httpx
+passlib
+python-jose[cryptography]

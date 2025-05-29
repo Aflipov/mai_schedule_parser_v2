@@ -1,0 +1,5 @@
+PyQt5
+requests
+Pillow
+python-dotenv
+python-multipart

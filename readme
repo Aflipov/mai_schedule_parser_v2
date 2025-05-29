@@ -1,0 +1,22 @@
+cd ./backend/
+
+python -m venv venv
+
+.\venv\Scripts\activate
+
+python.exe -m pip install --upgrade pip
+
+pip-compile req.in
+
+pip install -r req.txt
+
+
+
+docker build -t my-fastapi-app .
+
+docker-compose up -d
+
+docker run -p 8000:8000 -e DATABASE_URL="your_db_url" -e SECRET_KEY="your_secret_key" my-fastapi-app uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+
+uvicorn app.main:app --reload

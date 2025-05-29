@@ -1,0 +1,14 @@
+version: "3.12.1"
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/data
+    environment:
+      DATABASE_URL: "sqlite:///./data/schedule.db"
+      SECRET_KEY: "YOUR_SECRET_KEY"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+volumes:
+  db_data:
