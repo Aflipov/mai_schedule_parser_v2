@@ -9,11 +9,11 @@ from .parsers.schedule_downloader import url_gen, get_html
 
 logger = logging.getLogger(__name__)
 
-async def scrape_schedule_async(session: Session, client: httpx.Client, group_number: str, week_number: int) -> None:
+async def scrape_schedule_async(session: Session, client: httpx.AsyncClient, group_number: str, week_number: int) -> None:
     """
     Загружает, парсит и сохраняет расписание для заданной группы и недели.
     """
-    html = get_html(client, group_number, week_number)
+    html = await get_html(client, group_number, week_number)
     if html:
         schedule = parse_schedule(html)
         if schedule:
@@ -24,7 +24,7 @@ async def scrape_schedule_async(session: Session, client: httpx.Client, group_nu
     else:
         logger.error(f"Не удалось загрузить расписание для группы {group_number}, неделя {week_number}")
 
-async def scrape_and_update_all_schedules_async(session: Session, client: httpx.Client, group_numbers: list[str], week_numbers: list[int]) -> None:
+async def scrape_and_update_all_schedules_async(session: Session, client: httpx.AsyncClient, group_numbers: list[str], week_numbers: list[int]) -> None:
     """
     Загружает, парсит и сохраняет расписание для всех указанных групп и недель.
     """
@@ -48,17 +48,17 @@ def lesson_upload(session: Session, lesson: ParsedLesson) -> None:  # Use Parsed
         session.rollback()
         logger.error(f"Ошибка при добавлении урока: {e}")
 
-def schedule_upload(session: Session, schedule: list[dict]) -> None:
+def schedule_upload(session: Session, schedule: list[ParsedLesson]) -> None:
     if not schedule:
         logger.warning("Попытка загрузить пустое расписание.")
         return
 
     # 1. Получаем минимальную и максимальную даты из расписания
-    dates = set(lesson['start_time'].date() for lesson in schedule)
+    dates = set(lesson.start_time.date() for lesson in schedule)
     start_date = min(dates)
     end_date = max(dates)
 
-    group_number: str = schedule[0]['group']
+    group_number: str = schedule[0].group
 
     # 2. Удаляем старые записи для группы и диапазона дат
     group = database.add_group(session, group_number)

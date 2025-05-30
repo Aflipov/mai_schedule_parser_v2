@@ -55,7 +55,7 @@ def parse_schedule(html_content: str) -> List[ParsedLesson]:
         return []
 
     schedule: List[ParsedLesson] = []
-    current_year = datetime.datetime.now().year  # Get current year
+    current_year = datetime.now().year  # Get current year
 
     for day in days:
         date_element = day.find(class_="step-content").find('span')
@@ -67,7 +67,7 @@ def parse_schedule(html_content: str) -> List[ParsedLesson]:
         date_text = re.sub(r'[\n\t]', '', date_text)
         date_text = re.sub(r'[\xa0]', ' ', date_text)[4:].split()
 
-        for lesson in days.select("div[class='mb-4']"):
+        for lesson in day.select("div[class='mb-4']"):
             try:
                 lesson_title = lesson.find('div').text
                 lesson_content = [x.text for x in lesson.find('ul').find_all('li')]
@@ -78,11 +78,11 @@ def parse_schedule(html_content: str) -> List[ParsedLesson]:
                 lesson_type = lesson_title[-2:]
 
                 # Parse time with current year
-                lesson_start_time = datetime.datetime.strptime(
+                lesson_start_time = datetime.strptime(
                     f'{current_year} {eng_months[date_text[1]]} {date_text[0]} {lesson_content[0][:5]}',
                     '%Y %m %d %H:%M'
                 )
-                lesson_end_time = datetime.datetime.strptime(
+                lesson_end_time = datetime.strptime(
                     f'{current_year} {eng_months[date_text[1]]} {date_text[0]} {lesson_content[0][8:]}',
                     '%Y %m %d %H:%M'
                 )

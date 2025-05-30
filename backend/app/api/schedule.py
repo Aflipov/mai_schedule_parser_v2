@@ -161,8 +161,8 @@ async def force_parse(
     async def run_scraper(group_numbers: list[str], week_numbers: list[int], db: Session):
         logger.info(f"Запуск скрапера в фоне для групп: {group_numbers}, недели: {week_numbers}")
         async with httpx.AsyncClient(timeout=15.0) as client: # Create httpx Client
-            scrape_and_update_all_schedules_async(db, client, group_numbers, week_numbers)  # Pass the client
-            client.get(f'https://mai.ru/education/studies/schedule/index.php?group={urllib.parse.quote("М8О-102БВ-24")}&week={10}')
+            await client.get(f'https://mai.ru/education/studies/schedule/index.php?group={urllib.parse.quote("М8О-102БВ-24")}&week={10}')
+            await scrape_and_update_all_schedules_async(db, client, group_numbers, week_numbers)  # Pass the client
 
             def close_client() -> None:
                 logger.info("Закрываем сессию httpx...")

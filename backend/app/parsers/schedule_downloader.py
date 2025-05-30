@@ -17,12 +17,12 @@ cache = cachetools.TTLCache(maxsize=config.CACHE_MAX_SIZE, ttl=config.CACHE_TTL)
 def url_gen(group_number: str, week_number: int):
     return f'https://mai.ru/education/studies/schedule/index.php?group={urllib.parse.quote(group_number)}&week={week_number}'
 
-def get_html(client: httpx.Client, group_number: str, week_number: int):
+async def get_html(client: httpx.AsyncClient, group_number: str, week_number: int):
     """
     Загружает HTML-контент страницы расписания.
 
     Args:
-        client: httpx.Client session.
+        client: httpx.AsyncClient session.
         group_number: Номер группы.
         week_number: Номер недели.
 
@@ -38,7 +38,7 @@ def get_html(client: httpx.Client, group_number: str, week_number: int):
             return cache[cache_key]
 
         headers = {"User-Agent": config.USER_AGENT}  # Add User-Agent
-        r = client.get(url, headers=headers)
+        r = await client.get(url, headers=headers)
         r.raise_for_status()  # Check HTTP status code
 
         html = r.text

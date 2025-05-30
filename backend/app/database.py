@@ -48,26 +48,28 @@ create_db()
 def add_subject(session: Session, name: str) -> dbm.Subject:
     """Adds a subject if it doesn't exist."""
     stmt = select(dbm.Subject).filter_by(name=name)
-    existing_subject = session.execute(stmt).scalar_one_or_none()
-    if existing_subject:
-        logger.info(f"Subject '{name}' already exists.")
-        return existing_subject
-    subject = dbm.Subject(name=name)
-    session.add(subject)
-    logger.info(f"Subject '{name}' added.")
-    return subject
+    with get_session() as session:
+        existing_subject = session.execute(stmt).scalar_one_or_none()
+        if existing_subject:
+            logger.info(f"Subject '{name}' already exists.")
+            return existing_subject
+        subject = dbm.Subject(name=name)
+        session.add(subject)
+        logger.info(f"Subject '{name}' added.")
+        return subject
 
 def add_teacher(session: Session, name: str) -> dbm.Teacher:
     """Adds a teacher if it doesn't exist."""
     stmt = select(dbm.Teacher).filter_by(name=name)
-    existing_teacher = session.execute(stmt).scalar_one_or_none()
-    if existing_teacher:
-        logger.info(f"Teacher '{name}' already exists.")
-        return existing_teacher
-    teacher = dbm.Teacher(name=name)
-    session.add(teacher)
-    logger.info(f"Teacher '{name}' added.")
-    return teacher
+    with get_session() as session:
+        existing_teacher = session.execute(stmt).scalar_one_or_none()
+        if existing_teacher:
+            logger.info(f"Teacher '{name}' already exists.")
+            return existing_teacher
+        teacher = dbm.Teacher(name=name)
+        session.add(teacher)
+        logger.info(f"Teacher '{name}' added.")
+        return teacher
 
 def add_classroom(session: Session, name: str) -> dbm.Classroom:
     """Adds a classroom if it doesn't exist."""
@@ -84,14 +86,15 @@ def add_classroom(session: Session, name: str) -> dbm.Classroom:
 def add_group(session: Session, name: str) -> dbm.Group:
     """Adds a group if it doesn't exist."""
     stmt = select(dbm.Group).filter_by(name=name)
-    existing_group = session.execute(stmt).scalar_one_or_none()
-    if existing_group:
-        logger.info(f"Group '{name}' already exists.")
-        return existing_group
-    group = dbm.Group(name=name)
-    session.add(group)
-    logger.info(f"Group '{name}' added.")
-    return group
+    with get_session() as session:
+        existing_group = session.execute(stmt).scalar_one_or_none()
+        if existing_group:
+            logger.info(f"Group '{name}' already exists.")
+            return existing_group
+        group = dbm.Group(name=name)
+        session.add(group)
+        logger.info(f"Group '{name}' added.")
+        return group
 
 def add_lesson(session: Session, subject: dbm.Subject, teacher: dbm.Teacher,
                classroom: dbm.Classroom, start_time: DateTime,
@@ -99,13 +102,14 @@ def add_lesson(session: Session, subject: dbm.Subject, teacher: dbm.Teacher,
                group: dbm.Group) -> None:
     """Adds a lesson to the database."""
     lesson = dbm.Lesson(subject=subject, teacher=teacher, classroom=classroom, start_time=start_time, end_time=end_time, lesson_type=lesson_type, group=group)
-    session.add(lesson)
-    try:
-        session.commit()
-        logger.info(f"Lesson '{subject.name}' added.")
-    except IntegrityError as e:
-        session.rollback()
-        logger.warning(f"Lesson '{subject.name}' already exists: {e}")
+    with get_session() as session:
+        session.add(lesson)
+        try:
+            session.commit()
+            logger.info(f"Lesson '{subject.name}' added.")
+        except IntegrityError as e:
+            session.rollback()
+            logger.warning(f"Lesson '{subject.name}' already exists: {e}")
 
 def add_or_update_lesson(session: Session, subject: dbm.Subject, teacher: dbm.Teacher,
                        classroom: dbm.Classroom, start_time: DateTime,
@@ -117,28 +121,29 @@ def add_or_update_lesson(session: Session, subject: dbm.Subject, teacher: dbm.Te
         dbm.Lesson.group_id == group.id,
         dbm.Lesson.start_time == start_time
     )
-    existing_lesson = session.execute(stmt).scalar_one_or_none()
+    with get_session() as session:
+        existing_lesson = session.execute(stmt).scalar_one_or_none()
 
-    if existing_lesson:
-        logger.info(f"Lesson for group '{group.name}' at {start_time} already exists. Updating data.")
-        existing_lesson.subject = subject
-        existing_lesson.teacher = teacher
-        existing_lesson.classroom = classroom
-        existing_lesson.end_time = end_time
-        existing_lesson.lesson_type = lesson_type
-        session.commit()
-        return existing_lesson
-    else:
-        lesson = dbm.Lesson(subject=subject, teacher=teacher, classroom=classroom, start_time=start_time, end_time=end_time, lesson_type=lesson_type, group=group)
-        session.add(lesson)
-        try:
+        if existing_lesson:
+            logger.info(f"Lesson for group '{group.name}' at {start_time} already exists. Updating data.")
+            existing_lesson.subject = subject
+            existing_lesson.teacher = teacher
+            existing_lesson.classroom = classroom
+            existing_lesson.end_time = end_time
+            existing_lesson.lesson_type = lesson_type
             session.commit()
-            logger.info(f"Lesson '{subject.name}' added.")
-            return lesson
-        except IntegrityError as e:
-            session.rollback()
-            logger.error(f"Unexpected error when adding/updating lesson: {e}")
-            return None
+            return existing_lesson
+        else:
+            lesson = dbm.Lesson(subject=subject, teacher=teacher, classroom=classroom, start_time=start_time, end_time=end_time, lesson_type=lesson_type, group=group)
+            session.add(lesson)
+            try:
+                session.commit()
+                logger.info(f"Lesson '{subject.name}' added.")
+                return lesson
+            except IntegrityError as e:
+                session.rollback()
+                logger.error(f"Unexpected error when adding/updating lesson: {e}")
+                return None
 
 def delete_lessons_by_group_and_date_range(session: Session, group: dbm.Group, start_date: Date, end_date: Date) -> None:
     """Deletes lessons for a group within a date range."""
@@ -147,23 +152,25 @@ def delete_lessons_by_group_and_date_range(session: Session, group: dbm.Group, s
         func.date(dbm.Lesson.start_time) >= start_date,
         func.date(dbm.Lesson.start_time) <= end_date
     )
-    lessons_to_delete = session.execute(stmt).scalars().all()
-
-    for lesson in lessons_to_delete:
-        logger.info(f"Deleting lesson: {lesson}")
-        session.delete(lesson)
-    try:
-        session.commit()
-        logger.info(f"Lessons for group '{group.name}' in range '{start_date}' to '{end_date}' deleted.")
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Error while deleting lessons: {e}")
+    
+    with get_session() as session:
+        lessons_to_delete = session.execute(stmt).scalars().all()
+        for lesson in lessons_to_delete:
+            logger.info(f"Deleting lesson: {lesson}")
+            session.delete(lesson)
+        try:
+            session.commit()
+            logger.info(f"Lessons for group '{group.name}' in range '{start_date}' to '{end_date}' deleted.")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error while deleting lessons: {e}")
 
 def get_lessons_by_subject(session: Session, subject_name: str):
     """Gets lessons by subject name."""
     stmt = select(dbm.Lesson).join(dbm.Subject).where(dbm.Subject.name == subject_name)
-    lessons = session.execute(stmt).scalars().all()
-    return lessons
+    with get_session() as session:
+        lessons = session.execute(stmt).scalars().all()
+        return lessons
 
 def get_classroom_schedule(session: Session, classroom_name: str, date: Date):
     """Gets classroom schedule for a given date."""
@@ -173,25 +180,28 @@ def get_classroom_schedule(session: Session, classroom_name: str, date: Date):
         dbm.Classroom.name == classroom_name,
         dbm.Lesson.start_time.between(start_of_day, end_of_day)
     )
-    lessons = session.execute(stmt).scalars().all()
-    return lessons
+    with get_session() as session:
+        lessons = session.execute(stmt).scalars().all()
+        return lessons
 
 def get_all_lessons(session: Session):
     """Gets all lessons."""
     stmt = select(dbm.Lesson)
-    lessons = session.execute(stmt).scalars().all()
-    return lessons
+    with get_session() as session:
+        lessons = session.execute(stmt).scalars().all()
+        return lessons
 
 def update_lesson(session: Session, lesson_id: int, data: dict) -> None:
     """Updates a lesson by ID."""
-    lesson = session.get(dbm.Lesson, lesson_id)
-    if lesson:
-        for key, value in data.items():
-            setattr(lesson, key, value)
-        logger.info(f"Lesson with ID '{lesson_id}' updated.")
-        session.commit()
-    else:
-        logger.warning(f"Lesson with ID '{lesson_id}' not found.")
+    with get_session() as session:
+        lesson = session.get(dbm.Lesson, lesson_id)
+        if lesson:
+            for key, value in data.items():
+                setattr(lesson, key, value)
+            logger.info(f"Lesson with ID '{lesson_id}' updated.")
+            session.commit()
+        else:
+            logger.warning(f"Lesson with ID '{lesson_id}' not found.")
 
 def delete_lesson(session: Session, lesson_id: int) -> None:
     """Deletes a lesson by ID."""
