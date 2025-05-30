@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-SQLAlchemy
+SQLAlchemy<2.0
 bs4
 click
 requests_html
@@ -9,3 +9,4 @@ lxml_html_clean
 httpx
 passlib
 python-jose[cryptography]
+python-multipart

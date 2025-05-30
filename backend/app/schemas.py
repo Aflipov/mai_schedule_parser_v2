@@ -96,3 +96,6 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"  # Значение по умолчанию "bearer"
     expires_in: int | None = None # Добавлено поле времени жизни токена
+
+class TokenData(BaseModel):
+    username: str

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import asyncio
 import httpx
 import atexit
-from . import db
+from . import database
 from .parsers.schedule_parser import parse_schedule, ParsedLesson
 from .parsers.schedule_downloader import url_gen, get_html
 
@@ -32,16 +32,16 @@ async def scrape_and_update_all_schedules_async(session: Session, client: httpx.
     await asyncio.gather(*tasks)
 
 def lesson_upload(session: Session, lesson: ParsedLesson) -> None:  # Use ParsedLesson
-    subject = db.add_subject(session, lesson.subject)
-    teacher = db.add_teacher(session, lesson.teacher)
-    classroom = db.add_classroom(session, lesson.classroom)
+    subject = database.add_subject(session, lesson.subject)
+    teacher = database.add_teacher(session, lesson.teacher)
+    classroom = database.add_classroom(session, lesson.classroom)
     start_time = lesson.start_time
     end_time = lesson.end_time
     lesson_type = lesson.lesson_type
-    group = db.add_group(session, lesson.group)
+    group = database.add_group(session, lesson.group)
 
     try:
-        db.add_lesson(session, subject, teacher, classroom, start_time, end_time, lesson_type, group)
+        database.add_lesson(session, subject, teacher, classroom, start_time, end_time, lesson_type, group)
         session.commit()
         logger.info(f"Урок '{subject.name}' добавлен.")
     except Exception as e:
@@ -61,8 +61,8 @@ def schedule_upload(session: Session, schedule: list[dict]) -> None:
     group_number: str = schedule[0]['group']
 
     # 2. Удаляем старые записи для группы и диапазона дат
-    group = db.add_group(session, group_number)
-    db.delete_lessons_by_group_and_date_range(session, group, start_date, end_date)
+    group = database.add_group(session, group_number)
+    database.delete_lessons_by_group_and_date_range(session, group, start_date, end_date)
 
     for lesson in schedule:
         lesson_upload(session, lesson)

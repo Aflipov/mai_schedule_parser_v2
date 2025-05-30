@@ -1,9 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from ..db import get_session, dbm
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select
+from ..database import get_session, dbm
 from .. import schemas, auth
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
+import logging
+from contextlib import contextmanager
+from sqlalchemy import create_engine
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database setup
+DATABASE_URL = "sqlite:///./schedule.db"  # Example SQLite database URL
+ECHO = False
+
+engine = create_engine(DATABASE_URL, echo=ECHO)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def create_db() -> None:
+    """Creates the database and tables."""
+    dbm.Base.metadata.create_all(bind=engine)
+    logger.info("Database created successfully.")
+
+create_db()
+
+@contextmanager
+def get_session():
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception as e:
+        logger.error(f"Error during db operation {e}")
+        raise
+    finally:
+        db.close()
 
 router = APIRouter(
     prefix="/users",
@@ -39,7 +72,9 @@ async def read_user(user_id: int, db: Session = Depends(get_session), current_us
     """
     Получает пользователя по ID (только для администраторов).
     """
-    db_user = db.query(dbm.User).filter(dbm.User.id == user_id).first()
+    stmt = select(dbm.User).where(dbm.User.id == user_id)
+    with get_session() as db:
+        db_user = db.execute(stmt).scalar_one_or_none()
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
@@ -49,7 +84,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     """
     Получает JWT токен для аутентификации.
     """
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,13 +97,18 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-def authenticate_user(db: Session, username: str, password: str):
+async def authenticate_user(username: str, password: str, db: Session = Depends(get_session)):
     """
     Проверяет имя пользователя и пароль в базе данных.
     """
-    user = db.query(dbm.User).filter(dbm.User.username == username).first()
-    if not user:
-        return None
-    if not auth.verify_password(password, user.hashed_password):
-        return None
-    return user
+    stmt = select(dbm.User).where(dbm.User.username == username)
+    with get_session() as db:
+        user = db.execute(stmt).scalar_one_or_none()
+
+        if not user:
+            logger.warning(f"User not found: {username}")
+            return None
+        if not auth.verify_password(password, user.hashed_password):
+            logger.warning(f"Password verification failed for user: {username}")
+            return None
+        return user

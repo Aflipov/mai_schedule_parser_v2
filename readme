@@ -20,3 +20,6 @@ docker run -p 8000:8000 -e DATABASE_URL="your_db_url" -e SECRET_KEY="your_secret
 
 
 uvicorn app.main:app --reload
+
+
+docker exec -it my_fastapi_app bash

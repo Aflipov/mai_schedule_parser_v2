@@ -1,7 +1,7 @@
+# frontend/main.py
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QVBoxLayout,
-                             QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QMessageBox,
-                             QHBoxLayout)
+                             QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QMessageBox)
 import requests
 import logging
 
@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 API_URL = "http://localhost:8000"
 TOKEN_URL = f"{API_URL}/users/token"
 SCHEDULE_URL = f"{API_URL}/schedule/"
-FORCE_PARSE_URL = f"{API_URL}/schedule/force_parse"
 
 class ScheduleApp(QWidget):
     def __init__(self):
@@ -27,13 +26,11 @@ class ScheduleApp(QWidget):
         self.login_button = QPushButton("Login", self)
         self.group_input = QLineEdit(self)
         self.fetch_button = QPushButton("Fetch Schedule", self)
-        self.force_parse_button = QPushButton("Force Parse", self)
         self.schedule_table = QTableWidget(self)
 
         # Обработчики нажатия кнопок
         self.login_button.clicked.connect(self.login)
         self.fetch_button.clicked.connect(self.fetch_schedule)
-        self.force_parse_button.clicked.connect(self.force_parse)
 
         # Разметка
         layout = QVBoxLayout()
@@ -43,15 +40,8 @@ class ScheduleApp(QWidget):
         layout.addWidget(self.password_input)
         layout.addWidget(self.login_button)
         layout.addWidget(QLabel("Group Number:"))
-        self.group_input.setPlaceholderText("М8О-102БВ-24")
         layout.addWidget(self.group_input)
-
-        # Кнопки Fetch и Force Parse в одну линию
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.fetch_button)
-        button_layout.addWidget(self.force_parse_button)
-        layout.addLayout(button_layout)
-
+        layout.addWidget(self.fetch_button)
         layout.addWidget(self.schedule_table)
         self.setLayout(layout)
 
@@ -90,40 +80,6 @@ class ScheduleApp(QWidget):
             self.display_error_message(f"Login failed: An unexpected error occurred. {e}")
             logging.exception(f"Login failed: An unexpected error occurred. {e}")
 
-    def force_parse(self):
-        """Запускает принудительный парсинг расписания."""
-        # group_number = self.group_input.text()
-        # if not group_number:
-        #     self.display_error_message("Please enter a group number.")
-        #     return
-
-        if not self.token:
-            self.display_error_message("Please login first.")
-            return
-
-        headers = {"Authorization": f"Bearer {self.token}"}
-        # params = {"group_numbers": [group_number], "week_numbers": [10]}  # Пример: неделя 10
-        try:
-            # response = requests.post(FORCE_PARSE_URL, headers=headers, params=params, timeout=10)
-            response = requests.post(FORCE_PARSE_URL, headers=headers, timeout=10)
-            response.raise_for_status()
-            QMessageBox.information(self, "Success", "Force parse task started!")
-            logging.info(f"Force parse task started.")
-        except requests.exceptions.Timeout as e:
-            self.display_error_message(f"Force parse failed: Timeout error. Check server and network. {e}")
-            logging.error(f"Force parse failed: Timeout error. Check server and network. {e}")
-        except requests.exceptions.ConnectionError as e:
-            self.display_error_message(f"Force parse failed: Connection error. Check server availability. {e}")
-            logging.error(f"Force parse failed: Connection error. Check server availability. {e}")
-        except requests.exceptions.HTTPError as e:
-            self.display_error_message(f"Force parse failed: HTTP error {e.response.status_code}. Check token and permissions. {e}")
-            logging.error(f"Force parse failed: HTTP error. Status code: {e.response.status_code}.  {e.response.text if hasattr(e.response, 'text') else ''} {e}")
-        except ValueError as e:
-            self.display_error_message(f"Force parse failed: Invalid JSON response. Check server response. {e}")
-            logging.error(f"Force parse failed: Invalid JSON response.  {e} Response text: {response.text if 'response' in locals() and hasattr(response, 'text') else 'No response'}")
-        except Exception as e:
-            self.display_error_message(f"Force parse failed: An unexpected error occurred. {e}")
-            logging.exception(f"Force parse failed: An unexpected error occurred. {e}")
 
     def fetch_schedule(self):
         """Получает расписание с сервера и отображает его."""

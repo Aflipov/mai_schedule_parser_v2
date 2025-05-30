@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .db import engine
+from .database import engine
 from .db_models import Base
 from .api import schedule, users  # Импортируем роутеры
 

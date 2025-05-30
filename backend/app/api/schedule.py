@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from ..db import get_session, dbm
+from ..database import get_session, dbm
 from .. import schemas, auth
 from ..scraper import scrape_and_update_all_schedules_async
 import httpx
@@ -152,7 +152,7 @@ async def force_parse(
     group_numbers: List[str] = Query(["М8О-102БВ-24"], description="Список номеров групп"),
     week_numbers: List[int] = Query([10], description="Список номеров недель (1-18)"),
     db: Session = Depends(get_session),
-    current_user: schemas.User = Depends(auth.get_current_active_admin_user),
+    # current_user: schemas.User = Depends(auth.get_current_active_admin_user),
 ):
     """
     Запускает принудительный парсинг для указанных групп и недель (только для администраторов).
